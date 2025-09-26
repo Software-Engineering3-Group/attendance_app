@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+{% block content %}
+<h3>Lecturer Dashboard</h3>
+<ul>
+  <li><a href="{{ url_for('courses_bp.list_courses') }}">Course Management</a></li>
+  <li><a href="{{ url_for('attendance_bp.start_session') }}">Start/Monitor Attendance Session</a></li>
+  <li><a href="{{ url_for('main_bp.dashboard') }}">Analytics (coming)</a></li>
+  <li><a href="{{ url_for('auth_bp.logout') }}">Logout</a></li>
+</ul>
+{% endblock %}

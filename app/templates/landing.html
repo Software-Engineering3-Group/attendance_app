@@ -1,0 +1,9 @@
+{% extends "base.html" %}
+{% block content %}
+  <div class="text-center">
+    <h1>Face Recognition Attendance System</h1>
+    <p>Lecturers manage attendance; students use mobile app to mark attendance via face recognition.</p>
+    <a class="btn btn-primary" href="{{ url_for('auth_bp.login') }}">Login</a>
+    <a class="btn btn-success" href="{{ url_for('auth_bp.register') }}">Register</a>
+  </div>
+{% endblock %}

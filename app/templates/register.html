@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+{% block content %}
+<h3>Lecturer Sign Up</h3>
+<form method="post">
+  <div class="mb-3">
+    <label>Full name</label>
+    <input name="full_name" class="form-control" required>
+  </div>
+  <div class="mb-3">
+    <label>Email</label>
+    <input name="email" type="email" class="form-control" required>
+  </div>
+  <div class="mb-3">
+    <label>Contact</label>
+    <input name="contact" class="form-control">
+  </div>
+
+  <div class="mb-3">
+    <label>Department</label>
+    <select id="department-select" name="department" class="form-select">
+      <option value="">-- Select --</option>
+      {% for d in departments %}
+        <option value="{{ d.id }}">{{ d.name }}</option>
+      {% endfor %}
+    </select>
+  </div>
+
+  <div class="mb-3">
+    <label>Course</label>
+    <select id="course-select" name="course" class="form-select" disabled><option>Choose department first</option></select>
+  </div>
+
+  <div class="mb-3">
+    <label>Module</label>
+    <select id="module-select" name="module" class="form-select" disabled><option>Choose course first</option></select>
+  </div>
+
+  <div class="mb-3">
+    <label>Password</label>
+    <input type="password" name="password" class="form-control" required>
+  </div>
+  <div class="mb-3">
+    <label>Confirm password</label>
+    <input type="password" name="password2" class="form-control" required>
+  </div>
+
+  <button class="btn btn-success">Register</button>
+</form>
+
+<script>
+const dept = document.getElementById('department-select');
+const course = document.getElementById('course-select');
+const moduleSel = document.getElementById('module-select');
+
+dept?.addEventListener('change', async () => {
+  const id = dept.value;
+  if(!id){ course.innerHTML='<option>Choose department first</option>'; course.disabled=true; return;}
+  course.disabled = true;
+  course.innerHTML = '<option>Loading...</option>';
+  const res = await fetch(`/auth/api/departments/${id}/courses`);
+  const data = await res.json();
+  course.innerHTML = '<option value="">-- Select course --</option>';
+  data.forEach(c => { const o = document.createElement('option'); o.value=c.id; o.textContent=c.name; course.appendChild(o); });
+  course.disabled = false;
+});
+
+course?.addEventListener('change', async () => {
+  const id = course.value;
+  if(!id){ moduleSel.innerHTML='<option>Choose course first</option>'; moduleSel.disabled=true; return;}
+  moduleSel.disabled = true;
+  moduleSel.innerHTML = '<option>Loading...</option>';
+  const res = await fetch(`/auth/api/courses/${id}/modules`);
+  const data = await res.json();
+  moduleSel.innerHTML = '<option value="">-- Select module --</option>';
+  data.forEach(m => { const o = document.createElement('option'); o.value=m.id; o.textContent=m.name; moduleSel.appendChild(o); });
+  moduleSel.disabled = false;
+});
+</script>
+{% endblock %}
