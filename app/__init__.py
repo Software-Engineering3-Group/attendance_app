@@ -16,10 +16,10 @@ def create_app():
     app = Flask(__name__, template_folder=template_path, static_folder=static_path)
 
     # Config
-    app.config["SECRET_KEY"] = os.getenv("SECRET_KEY", "dev_secret")
+    app.config["SECRET_KEY"] = os.getenv("SECRET_KEY")
     app.config["SQLALCHEMY_DATABASE_URI"] = os.getenv("DATABASE_URL", "sqlite:///dev.db")
     app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
-    app.config["JWT_SECRET_KEY"] = os.getenv("JWT_SECRET_KEY", "super-secret-key")
+    app.config["JWT_SECRET_KEY"] = os.getenv("JWT_SECRET_KEY")
 
     # Lazy imports
     from .models import db

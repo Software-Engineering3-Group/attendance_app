@@ -92,3 +92,60 @@ def api_courses(dept_id):
 def api_modules(course_id):
     modules = Module.query.filter_by(course_id=course_id).order_by(Module.name).all()
     return jsonify([{"id": m.id, "name": m.name} for m in modules])
+
+# ----------------------
+# Student registration (mobile)
+@auth_bp.route("/api/students/register", methods=["POST"])
+def api_student_register():
+    data = request.get_json() or {}
+    full_name = data.get("full_name")
+    email = data.get("email")
+    contact = data.get("contact")
+    password = data.get("password")
+    password2 = data.get("password2")
+    face_encoding = data.get("face_encoding")  # assuming you send a serialized face vector
+    department_id = data.get("department_id") or None
+    course_id = data.get("course_id") or None
+    module_id = data.get("module_id") or None
+
+    if not full_name or not email or not password:
+        return jsonify({"msg": "Required fields missing"}), 400
+
+    if password != password2:
+        return jsonify({"msg": "Passwords do not match"}), 400
+
+    if User.query.filter_by(email=email).first():
+        return jsonify({"msg": "Email already registered"}), 409
+
+    hashed = generate_password_hash(password)
+    user = User(
+        full_name=full_name,
+        email=email,
+        contact=contact,
+        password_hash=hashed,
+        role="student",
+        face_encoding=face_encoding,
+        department_id=department_id,
+        course_id=course_id,
+        module_id=module_id
+    )
+    db.session.add(user)
+    db.session.commit()
+
+    return jsonify({"msg": "Student registered successfully"}), 201
+
+# ----------------------
+# Student login (mobile)
+# ----------------------
+@auth_bp.route("/api/students/login", methods=["POST"])
+def api_student_login():
+    data = request.get_json() or {}
+    email = data.get("email")
+    password = data.get("password")
+    user = User.query.filter_by(email=email, role="student").first()
+
+    if not user or not check_password_hash(user.password_hash, password):
+        return jsonify({"msg": "Invalid credentials"}), 401
+
+    token = create_access_token(identity=user.id)
+    return jsonify({"access_token": token, "user_id": user.id, "full_name": user.full_name})
