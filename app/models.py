@@ -4,6 +4,7 @@ from datetime import datetime
 
 db = SQLAlchemy()
 
+#Faculty → Department → Course → Module → Student / Lecturer
 # ------------------ User Base ------------------
 class User(UserMixin, db.Model):
     __tablename__ = "users"
@@ -24,6 +25,7 @@ class Student(db.Model):
     department_id = db.Column(db.Integer, db.ForeignKey("departments.id"), nullable=True)
     course_id = db.Column(db.Integer, db.ForeignKey("courses.id"), nullable=True)
     module_id = db.Column(db.Integer, db.ForeignKey("modules.id"), nullable=True)
+    face_encoding = db.Column(db.Text, nullable=True) 
     user = db.relationship("User", backref=db.backref("student_profile", uselist=False))
 
 class Lecturer(db.Model):
@@ -33,13 +35,26 @@ class Lecturer(db.Model):
     department_id = db.Column(db.Integer, db.ForeignKey("departments.id"), nullable=True)
     user = db.relationship("User", backref=db.backref("lecturer_profile", uselist=False))
 
-# ------------------ Academic Models ------------------
+# ------------------ Faculty & Academic Models ------------------
+class Faculty(db.Model):
+    __tablename__ = "faculties"
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(180), unique=True, nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    # Relationships
+    departments = db.relationship("Department", backref="faculty", lazy=True)
+
 class Department(db.Model):
     __tablename__ = "departments"
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(150), unique=True, nullable=False)
+    faculty_id = db.Column(db.Integer, db.ForeignKey("faculties.id"), nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    # Relationships
     courses = db.relationship("Course", backref="department", lazy=True)
     students = db.relationship("Student", backref="department", lazy=True)
     lecturers = db.relationship("Lecturer", backref="department", lazy=True)
@@ -51,6 +66,8 @@ class Course(db.Model):
     department_id = db.Column(db.Integer, db.ForeignKey("departments.id"), nullable=False)
     semester = db.Column(db.String(50), nullable=True)
     year = db.Column(db.Integer, nullable=True)
+
+    # Relationships
     modules = db.relationship("Module", backref="course", lazy=True)
     students = db.relationship("Student", backref="course", lazy=True)
 
@@ -59,6 +76,8 @@ class Module(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(180), nullable=False)
     course_id = db.Column(db.Integer, db.ForeignKey("courses.id"), nullable=False)
+
+    # Relationships
     students = db.relationship("Student", backref="module", lazy=True)
     attendance_sessions = db.relationship("AttendanceSession", backref="module", lazy=True)
     marks = db.relationship("Mark", backref="module", lazy=True)
@@ -72,6 +91,8 @@ class AttendanceSession(db.Model):
     started_at = db.Column(db.DateTime, default=datetime.utcnow)
     ended_at = db.Column(db.DateTime, nullable=True)
     is_active = db.Column(db.Boolean, default=True)
+
+    # Relationships
     records = db.relationship("AttendanceRecord", backref="session", lazy=True)
 
 class AttendanceRecord(db.Model):
@@ -81,6 +102,7 @@ class AttendanceRecord(db.Model):
     student_id = db.Column(db.Integer, db.ForeignKey("students.id"), nullable=False)
     timestamp = db.Column(db.DateTime, default=datetime.utcnow)
     status = db.Column(db.String(20), default="present")
+
     student = db.relationship("Student", backref=db.backref("attendance_records", lazy=True))
 
 # ------------------ Marks ------------------
@@ -91,6 +113,7 @@ class Mark(db.Model):
     module_id = db.Column(db.Integer, db.ForeignKey("modules.id"), nullable=False)
     mark = db.Column(db.Float, nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
     student = db.relationship("Student", backref=db.backref("marks", lazy=True))
 
 # ------------------ Announcements ------------------
@@ -101,4 +124,5 @@ class Announcement(db.Model):
     body = db.Column(db.Text, nullable=False)
     uploader_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
     uploader = db.relationship("User", backref=db.backref("announcements", lazy=True))
