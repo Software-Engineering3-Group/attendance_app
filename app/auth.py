@@ -2,7 +2,7 @@ from flask import Blueprint, render_template, request, redirect, url_for, flash,
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_login import login_user, logout_user, login_required, current_user
 from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identity
-from .models import db, User, Department, Course, Module
+from .models import db, User, Department, Course, Module, Student
 
 auth_bp = Blueprint("auth_bp", __name__)
 
@@ -93,43 +93,55 @@ def api_modules(course_id):
     modules = Module.query.filter_by(course_id=course_id).order_by(Module.name).all()
     return jsonify([{"id": m.id, "name": m.name} for m in modules])
 
-# ----------------------
-# Student registration (mobile)
+# -------------- Student registration (mobile)
 @auth_bp.route("/api/students/register", methods=["POST"])
 def api_student_register():
     data = request.get_json() or {}
+    print(data)
+
     full_name = data.get("full_name")
     email = data.get("email")
     contact = data.get("contact")
     password = data.get("password")
-    password2 = data.get("password2")
-    face_encoding = data.get("face_encoding")  # assuming you send a serialized face vector
-    department_id = data.get("department_id") or None
-    course_id = data.get("course_id") or None
-    module_id = data.get("module_id") or None
+    student_number = data.get("student_number")
+    department_id = data.get("department_id")
+    course_id = data.get("course_id")
+    module_id = data.get("module_id")
+    # Optional: face encoding
+    face_encoding = data.get("face_encoding")
 
-    if not full_name or not email or not password:
+    if not full_name or not email or not password or not student_number:
         return jsonify({"msg": "Required fields missing"}), 400
-
-    if password != password2:
-        return jsonify({"msg": "Passwords do not match"}), 400
 
     if User.query.filter_by(email=email).first():
         return jsonify({"msg": "Email already registered"}), 409
 
+    # Create user
     hashed = generate_password_hash(password)
     user = User(
         full_name=full_name,
         email=email,
         contact=contact,
         password_hash=hashed,
-        role="student",
-        face_encoding=face_encoding,
-        department_id=department_id,
-        course_id=course_id,
-        module_id=module_id
+        type="student",
     )
     db.session.add(user)
+    db.session.flush()  # Get the user.id before commit
+
+    # Create student profile
+    student = Student(
+        id=user.id,
+        student_number=student_number,
+        department_id=department_id,
+        course_id=course_id,
+        module_id=module_id,
+        face_encoding=face_encoding  # If you want to store it (add column first)
+    )
+    db.session.add(student)
+
+    # If you want to store face_encoding, add column first
+    # Example: db.Column(db.Text, nullable=True) in Student
+
     db.session.commit()
 
     return jsonify({"msg": "Student registered successfully"}), 201
