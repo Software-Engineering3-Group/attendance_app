@@ -1,44 +1,64 @@
 {% extends "base.html" %}
 {% block content %}
 <h3>Lecturer Sign Up</h3>
+
 <form method="post">
   <div class="mb-3">
     <label>Full name</label>
     <input name="full_name" class="form-control" required>
   </div>
+
   <div class="mb-3">
     <label>Email</label>
     <input name="email" type="email" class="form-control" required>
   </div>
+
   <div class="mb-3">
     <label>Contact</label>
     <input name="contact" class="form-control">
   </div>
 
+  <!-- Faculty -->
   <div class="mb-3">
-    <label>Department</label>
-    <select id="department-select" name="department" class="form-select">
-      <option value="">-- Select --</option>
-      {% for d in departments %}
-        <option value="{{ d.id }}">{{ d.name }}</option>
+    <label>Faculty</label>
+    <select id="faculty-select" name="faculty" class="form-select">
+      <option value="">-- Select Faculty --</option>
+      {% for f in faculties %}
+        <option value="{{ f.id }}">{{ f.name }}</option>
       {% endfor %}
     </select>
   </div>
 
+  <!-- Department -->
+  <div class="mb-3">
+    <label>Department</label>
+    <select id="department-select" name="department" class="form-select" disabled>
+      <option value="">Choose faculty first</option>
+    </select>
+  </div>
+
+  <!-- Course -->
   <div class="mb-3">
     <label>Course</label>
-    <select id="course-select" name="course" class="form-select" disabled><option>Choose department first</option></select>
+    <select id="course-select" name="course" class="form-select" disabled>
+      <option value="">Choose department first</option>
+    </select>
   </div>
 
+  <!-- Module -->
   <div class="mb-3">
     <label>Module</label>
-    <select id="module-select" name="module" class="form-select" disabled><option>Choose course first</option></select>
+    <select id="module-select" name="module" class="form-select" disabled>
+      <option value="">Choose course first</option>
+    </select>
   </div>
 
+  <!-- Password -->
   <div class="mb-3">
     <label>Password</label>
     <input type="password" name="password" class="form-control" required>
   </div>
+
   <div class="mb-3">
     <label>Confirm password</label>
     <input type="password" name="password2" class="form-control" required>
@@ -48,32 +68,96 @@
 </form>
 
 <script>
-const dept = document.getElementById('department-select');
-const course = document.getElementById('course-select');
-const moduleSel = document.getElementById('module-select');
+// DOM Elements
+const facultySelect = document.getElementById('faculty-select');
+const deptSelect = document.getElementById('department-select');
+const courseSelect = document.getElementById('course-select');
+const moduleSelect = document.getElementById('module-select');
 
-dept?.addEventListener('change', async () => {
-  const id = dept.value;
-  if(!id){ course.innerHTML='<option>Choose department first</option>'; course.disabled=true; return;}
-  course.disabled = true;
-  course.innerHTML = '<option>Loading...</option>';
-  const res = await fetch(`/auth/api/departments/${id}/courses`);
-  const data = await res.json();
-  course.innerHTML = '<option value="">-- Select course --</option>';
-  data.forEach(c => { const o = document.createElement('option'); o.value=c.id; o.textContent=c.name; course.appendChild(o); });
-  course.disabled = false;
+// Helper: fetch JSON data
+async function fetchData(url) {
+  const res = await fetch(url);
+  if (!res.ok) {
+    console.error("Error fetching", url);
+    return [];
+  }
+  return await res.json();
+}
+
+// --- FACULTY → DEPARTMENT ---
+facultySelect.addEventListener('change', async () => {
+  const facultyId = facultySelect.value;
+  deptSelect.disabled = true;
+  deptSelect.innerHTML = '<option>Loading departments...</option>';
+
+  if (!facultyId) {
+    deptSelect.innerHTML = '<option>Choose faculty first</option>';
+    return;
+  }
+
+  const departments = await fetchData(`/api/faculties/${facultyId}/departments`);
+  deptSelect.innerHTML = '<option value="">-- Select Department --</option>';
+  departments.forEach(d => {
+    const opt = document.createElement('option');
+    opt.value = d.id;
+    opt.textContent = d.name;
+    deptSelect.appendChild(opt);
+  });
+  deptSelect.disabled = false;
+
+  // Reset child dropdowns
+  courseSelect.innerHTML = '<option>Choose department first</option>';
+  courseSelect.disabled = true;
+  moduleSelect.innerHTML = '<option>Choose course first</option>';
+  moduleSelect.disabled = true;
 });
 
-course?.addEventListener('change', async () => {
-  const id = course.value;
-  if(!id){ moduleSel.innerHTML='<option>Choose course first</option>'; moduleSel.disabled=true; return;}
-  moduleSel.disabled = true;
-  moduleSel.innerHTML = '<option>Loading...</option>';
-  const res = await fetch(`/auth/api/courses/${id}/modules`);
-  const data = await res.json();
-  moduleSel.innerHTML = '<option value="">-- Select module --</option>';
-  data.forEach(m => { const o = document.createElement('option'); o.value=m.id; o.textContent=m.name; moduleSel.appendChild(o); });
-  moduleSel.disabled = false;
+// --- DEPARTMENT → COURSE ---
+deptSelect.addEventListener('change', async () => {
+  const deptId = deptSelect.value;
+  courseSelect.disabled = true;
+  courseSelect.innerHTML = '<option>Loading courses...</option>';
+
+  if (!deptId) {
+    courseSelect.innerHTML = '<option>Choose department first</option>';
+    return;
+  }
+
+  const courses = await fetchData(`/api/departments/${deptId}/courses`);
+  courseSelect.innerHTML = '<option value="">-- Select Course --</option>';
+  courses.forEach(c => {
+    const opt = document.createElement('option');
+    opt.value = c.id;
+    opt.textContent = c.name;
+    courseSelect.appendChild(opt);
+  });
+  courseSelect.disabled = false;
+
+  // Reset module dropdown
+  moduleSelect.innerHTML = '<option>Choose course first</option>';
+  moduleSelect.disabled = true;
+});
+
+// --- COURSE → MODULE ---
+courseSelect.addEventListener('change', async () => {
+  const courseId = courseSelect.value;
+  moduleSelect.disabled = true;
+  moduleSelect.innerHTML = '<option>Loading modules...</option>';
+
+  if (!courseId) {
+    moduleSelect.innerHTML = '<option>Choose course first</option>';
+    return;
+  }
+
+  const modules = await fetchData(`/api/courses/${courseId}/modules`);
+  moduleSelect.innerHTML = '<option value="">-- Select Module --</option>';
+  modules.forEach(m => {
+    const opt = document.createElement('option');
+    opt.value = m.id;
+    opt.textContent = m.name;
+    moduleSelect.appendChild(opt);
+  });
+  moduleSelect.disabled = false;
 });
 </script>
 {% endblock %}
