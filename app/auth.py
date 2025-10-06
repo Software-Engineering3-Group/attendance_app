@@ -176,7 +176,7 @@ def api_student_login():
     password = data.get("password")
     user = User.query.filter_by(email=email).first()
 
-    user = User.query.filter_by(email=email, type="student").first()
+    user = User.query.filter_by(email=email).first()
     if not user or not check_password_hash(user.password_hash, password):
         return jsonify({"msg": "Invalid credentials"}), 401
 
