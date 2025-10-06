@@ -31,9 +31,33 @@ class Student(db.Model):
 class Lecturer(db.Model):
     __tablename__ = "lecturers"
     id = db.Column(db.Integer, db.ForeignKey("users.id"), primary_key=True)
-    lecturer_id = db.Column(db.String(50), unique=True, nullable=False)
+    employee_id = db.Column(db.String(50), unique=True, nullable=False)
     department_id = db.Column(db.Integer, db.ForeignKey("departments.id"), nullable=True)
     user = db.relationship("User", backref=db.backref("lecturer_profile", uselist=False))
+
+class Admin(db.Model):
+    __tablename__ = "admins"
+    id = db.Column(db.Integer, db.ForeignKey("users.id"), primary_key=True)
+    employee_id = db.Column(db.String(50), unique=True, nullable=False)
+    user = db.relationship("User", backref=db.backref("admin_profile", uselist=False))
+
+class LecturerAssignment(db.Model):
+    __tablename__ =  "lecturer_assignments"
+    _table_args__ = {"extend_existing": True}
+
+    id=db.Column(db.Integer, primary_key=True)
+    #lecturer_id= db.Column(db.Integer, db.Foreignkey("lecturer.id"), nullable=False)
+    faculty_id= db.Column(db.Integer, db.ForeignKey("faculties.id"), nullable=False)
+    department_id = db.Column(db.Integer, db.ForeignKey("departments.id"), nullable=False)
+    course_id = db.Column(db.Integer, db. ForeignKey("courses.id"), nullable=False)
+    module_id= db.Column(db.Integer, db.ForeignKey("modules.id"), nullable=False)
+
+    assigned_at =  db.Column(db.DateTime, default=datetime.utcnow)
+    lecturer = db.relationship("User", back_populates="lecturer_assignments")
+    faculty = db.relationship("Faculty", back_populates="faculty_assignments")
+    department = db.relationship("Department", back_populates="department_assignments")
+    course = db.relationship("Course", back_populates="course_assignments")
+    module = db.relationship("Module", back_populates="assignments")
 
 # ------------------ Faculty & Academic Models ------------------
 class Faculty(db.Model):
