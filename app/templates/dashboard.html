@@ -1,10 +1,86 @@
 {% extends "base.html" %}
 {% block content %}
-<h3>Lecturer Dashboard</h3>
-<ul>
-  <li><a href="{{ url_for('courses_bp.list_courses') }}">Course Management</a></li>
-  <li><a href="{{ url_for('attendance_bp.start_session') }}">Start/Monitor Attendance Session</a></li>
-  <li><a href="{{ url_for('main_bp.dashboard') }}">Analytics (coming)</a></li>
-  <li><a href="{{ url_for('auth_bp.logout') }}">Logout</a></li>
-</ul>
+
+<div class="container mt-4">
+  <h2 class="mb-4 text-center">Lecturer Dashboard</h2>
+
+  <!-- Welcome Banner -->
+  <div class="alert alert-info">
+    Welcome, <strong>{{ lecturer.full_name }}</strong>!
+    <br>
+    Department: {{ lecturer.department.name if lecturer.department else "N/A" }}
+  </div>
+
+  <!-- Dashboard Grid -->
+  <div class="row g-4">
+
+    <!-- Course Management -->
+    <div class="col-md-6 col-lg-4">
+      <div class="card shadow-lg rounded-4 border-0">
+        <div class="card-body">
+          <h5 class="card-title">📘 Course Management</h5>
+          <p class="card-text">Manage student lists, link modules to venues, and configure attendance sessions.</p>
+          <a href="{{ url_for('courses_bp.list_courses') }}" class="btn btn-primary w-100">Manage Courses</a>
+        </div>
+      </div>
+    </div>
+
+    <!-- Attendance Monitoring -->
+    <div class="col-md-6 col-lg-4">
+      <div class="card shadow-lg rounded-4 border-0">
+        <div class="card-body">
+          <h5 class="card-title">🕒 Attendance Monitoring</h5>
+          <p class="card-text">Start or stop attendance sessions and monitor student check-ins in real time.</p>
+          {% for course in courses %}
+          <div class="d-flex justify-content-between mt-2">
+            <span>{{ course.name }}</span>
+            <div>
+              <a href="{{ url_for('main_bp.start_attendance', course_id=course.id) }}" class="btn btn-success btn-sm">Start</a>
+              <a href="{{ url_for('main_bp.stop_attendance', course_id=course.id) }}" class="btn btn-danger btn-sm">Stop</a>
+            </div>
+          </div>
+          {% else %}
+          <p class="text-muted">No courses available.</p>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+
+    <!-- Analytics & Reporting -->
+    <div class="col-md-6 col-lg-4">
+      <div class="card shadow-lg rounded-4 border-0">
+        <div class="card-body">
+          <h5 class="card-title">📊 Analytics & Reporting</h5>
+          <p class="card-text">View attendance summaries, participation metrics, and trends over time.</p>
+          <a href="{{ url_for('main_bp.analytics') }}" class="btn btn-warning w-100">View Analytics</a>
+        </div>
+      </div>
+    </div>
+
+    <!-- Performance Marks -->
+    <div class="col-md-6 col-lg-4">
+      <div class="card shadow-lg rounded-4 border-0">
+        <div class="card-body">
+          <h5 class="card-title">🏆 Performance Marks</h5>
+          <p class="card-text">Update student attendance marks and track overall performance scores.</p>
+          <a href="{{ url_for('courses_bp.manage_marks') }}" class="btn btn-secondary w-100">Manage Marks</a>
+        </div>
+      </div>
+    </div>
+
+    <!-- Communication Tools -->
+    <div class="col-md-6 col-lg-4">
+      <div class="card shadow-lg rounded-4 border-0">
+        <div class="card-body">
+          <h5 class="card-title">💬 Communication Tools</h5>
+          <p class="card-text">Share announcements, upload resources, and send updates to students.</p>
+          <a href="{{ url_for('main_bp.communications') }}" class="btn btn-info w-100">Communicate</a>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+</div>
+
 {% endblock %}

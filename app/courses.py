@@ -39,3 +39,9 @@ def api_modules(course_id):
     modules = Module.query.filter_by(course_id=course_id).order_by(Module.name).all()
     result = [{"id": m.id, "name": m.name} for m in modules] if modules else []
     return jsonify(result)
+
+@courses_bp.route("/manage-marks")
+@login_required
+def manage_marks():
+    """Temporary placeholder for managing student marks."""
+    return render_template("manage_marks.html")

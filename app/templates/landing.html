@@ -1,9 +1,26 @@
 {% extends "base.html" %}
 {% block content %}
-  <div class="text-center">
+  <div class="text-center mt-5">
     <h1>Face Recognition Attendance System</h1>
-    <p>Lecturers manage attendance; students use mobile app to mark attendance via face recognition.</p>
-    <a class="btn btn-primary" href="{{ url_for('auth_bp.login') }}">Login</a>
-    <a class="btn btn-success" href="{{ url_for('auth_bp.register') }}">Register</a>
+    <p class="mb-4">
+      Lecturers manage attendance; students use the mobile app to mark attendance via face recognition.
+    </p>
+
+    <div class="d-flex justify-content-center gap-4">
+      <!-- Lecturer Section -->
+      <div>
+        <h5>Lecturer</h5>
+        <a class="btn btn-primary mb-2" href="{{ url_for('auth_bp.lecturer_login') }}">Login as Lecturer</a><br>
+        <a class="btn btn-outline-primary" href="{{ url_for('auth_bp.lecturer_register') }}">Sign Up as Lecturer</a>
+      </div>
+
+      <!-- Admin Section -->
+      <div>
+        <h5>System Admin</h5>
+        <a class="btn btn-danger mb-2" href="{{ url_for('auth_bp.admin_login') }}">Login as Admin</a><br>
+        <a class="btn btn-outline-danger" href="{{ url_for('auth_bp.admin_register') }}">Sign Up as Admin</a>
+      </div>
+    </div>
   </div>
 {% endblock %}
+
