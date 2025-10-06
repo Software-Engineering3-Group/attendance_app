@@ -37,6 +37,12 @@ class Student(db.Model):
     course_id = db.Column(db.Integer, db.ForeignKey("courses.id"), nullable=True)
     module_id = db.Column(db.Integer, db.ForeignKey("modules.id"), nullable=True)
     face_encoding = db.Column(db.Text, nullable=True)
+    # <-- Add this
+    attendance_records = db.relationship(
+        "AttendanceRecord",
+        back_populates="student",
+        lazy=True,
+        cascade="all, delete-orphan")
 
     user = db.relationship("User", backref=db.backref("student_profile", uselist=False))
 
@@ -45,6 +51,12 @@ class Lecturer(db.Model):
     id = db.Column(db.Integer, db.ForeignKey("users.id"), primary_key=True)
     employee_id = db.Column(db.String(50), unique=True, nullable=False)
     department_id = db.Column(db.Integer, db.ForeignKey("departments.id"), nullable=True)
+
+    lecturer_assignments = db.relationship(
+        "LecturerAssignment",
+        back_populates="lecturer",
+        cascade="all, delete-orphan"
+    )
 
     user = db.relationship("User", backref=db.backref("lecturer_profile", uselist=False))
 
@@ -56,17 +68,16 @@ class Admin(db.Model):
 
 class LecturerAssignment(db.Model):
     __tablename__ =  "lecturer_assignments"
-    _table_args__ = {"extend_existing": True}
 
     id=db.Column(db.Integer, primary_key=True)
-    #lecturer_id= db.Column(db.Integer, db.Foreignkey("lecturer.id"), nullable=False)
+    lecturer_id= db.Column(db.Integer, db.ForeignKey("lecturers.id"), nullable=False)
     faculty_id= db.Column(db.Integer, db.ForeignKey("faculties.id"), nullable=False)
     department_id = db.Column(db.Integer, db.ForeignKey("departments.id"), nullable=False)
     course_id = db.Column(db.Integer, db. ForeignKey("courses.id"), nullable=False)
     module_id= db.Column(db.Integer, db.ForeignKey("modules.id"), nullable=False)
 
+    lecturer = db.relationship('Lecturer', back_populates='lecturer_assignments')
     assigned_at =  db.Column(db.DateTime, default=datetime.utcnow)
-    lecturer = db.relationship("User", back_populates="lecturer_assignments")
     faculty = db.relationship("Faculty", back_populates="faculty_assignments")
     department = db.relationship("Department", back_populates="department_assignments")
     course = db.relationship("Course", back_populates="course_assignments")
@@ -124,24 +135,6 @@ class Module(db.Model):
 # -------------------------
 # LecturerAssignment Model
 # -------------------------
-class LecturerAssignment(db.Model):
-    __tablename__ = "lecturer_assignments"
-    __table_args__ = {"extend_existing": True}
-
-    id = db.Column(db.Integer, primary_key=True)
-    lecturer_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
-    faculty_id = db.Column(db.Integer, db.ForeignKey("faculties.id"), nullable=False)
-    department_id = db.Column(db.Integer, db.ForeignKey("departments.id"), nullable=False)
-    course_id = db.Column(db.Integer, db.ForeignKey("courses.id"), nullable=False)
-    module_id = db.Column(db.Integer, db.ForeignKey("modules.id"), nullable=False)
-    assigned_at = db.Column(db.DateTime, default=datetime.utcnow)
-
-    lecturer = db.relationship("User", back_populates="lecturer_assignments")
-    faculty = db.relationship("Faculty", back_populates="faculty_assignments")
-    department = db.relationship("Department", back_populates="department_assignments")
-    course = db.relationship("Course", back_populates="course_assignments")
-    module = db.relationship("Module", back_populates="assignments")
-
 
 
 # -------------------------
