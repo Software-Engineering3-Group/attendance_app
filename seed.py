@@ -1,65 +1,49 @@
-## seed.py
 from app import create_app
-from app.models import db, Department, Course, Module
+from app.models import db, Faculty, Department, Course, Module  # ✅ import from app.models
 
-# create the Flask app context
 app = create_app()
 
-with app.app_context():
-    # clear existing (optional, uncomment if you want a clean slate)
-    # db.drop_all()
-    # db.create_all()
+with app.app_context():  # ✅ ensure all DB operations happen inside app context
+    # Drop and recreate all tables
+    db.drop_all()
+    db.create_all()
 
-    # ----------------------
-    # DUT Departments, Courses, Modules
-    # ----------------------
-    data = {
-        "Information & Communication Technology": {
-            "Information Technology": [
-                "Programming 1", "Programming 2", "Databases", "Networking", "Software Engineering"
-            ],
-            "Computer Systems": [
-                "Electronics", "Operating Systems", "Networking", "Embedded Systems"
-            ],
-        },
-        "Accounting & Informatics": {
-            "Financial Accounting": [
-                "Accounting 1", "Accounting 2", "Taxation", "Auditing"
-            ],
-            "Business Information Systems": [
-                "Systems Analysis", "Business Processes", "ERP Systems"
-            ],
-        },
-        "Engineering & Built Environment": {
-            "Civil Engineering": [
-                "Engineering Mathematics", "Structural Engineering", "Geotechnics"
-            ],
-            "Electrical Engineering": [
-                "Circuit Theory", "Power Systems", "Control Systems"
-            ],
-        },
-    }
+    # ====== FACULTIES ======
+    ict_faculty = Faculty(name="Faculty of Accounting and Informatics")
+    engineering_faculty = Faculty(name="Faculty of Engineering and the Built Environment")
+    health_faculty = Faculty(name="Faculty of Health Sciences")
 
-    # insert departments, courses, modules
-    for dept_name, courses in data.items():
-        dept = Department.query.filter_by(name=dept_name).first()
-        if not dept:
-            dept = Department(name=dept_name)
-            db.session.add(dept)
-            db.session.commit()
-
-        for course_name, modules in courses.items():
-            course = Course.query.filter_by(name=course_name, department_id=dept.id).first()
-            if not course:
-                course = Course(name=course_name, department_id=dept.id)
-                db.session.add(course)
-                db.session.commit()
-
-            for module_name in modules:
-                mod = Module.query.filter_by(name=module_name, course_id=course.id).first()
-                if not mod:
-                    mod = Module(name=module_name, course_id=course.id)
-                    db.session.add(mod)
-
+    db.session.add_all([ict_faculty, engineering_faculty, health_faculty])
     db.session.commit()
-    print("✅ DUT departments, courses, and modules have been seeded!")
+
+    # ====== DEPARTMENTS ======
+    ict_department = Department(name="Information & Communication Technology", faculty_id=ict_faculty.id)
+    civil_department = Department(name="Civil Engineering", faculty_id=engineering_faculty.id)
+    nursing_department = Department(name="Nursing Sciences", faculty_id=health_faculty.id)
+
+    db.session.add_all([ict_department, civil_department, nursing_department])
+    db.session.commit()
+
+    # ====== COURSES ======
+    it_course = Course(name="Diploma in Information Technology", department_id=ict_department.id)
+    civil_course = Course(name="Diploma in Civil Engineering", department_id=civil_department.id)
+    nursing_course = Course(name="Bachelor of Nursing", department_id=nursing_department.id)
+
+    db.session.add_all([it_course, civil_course, nursing_course])
+    db.session.commit()
+
+    # ====== MODULES ======
+    modules = [
+        Module(name="Web Development", course_id=it_course.id),
+        Module(name="Database Systems", course_id=it_course.id),
+        Module(name="Software Engineering", course_id=it_course.id),
+        Module(name="Structural Analysis", course_id=civil_course.id),
+        Module(name="Surveying", course_id=civil_course.id),
+        Module(name="Anatomy", course_id=nursing_course.id),
+        Module(name="Pharmacology", course_id=nursing_course.id)
+    ]
+
+    db.session.add_all(modules)
+    db.session.commit()
+
+    print("✅ All data seeded successfully!")
