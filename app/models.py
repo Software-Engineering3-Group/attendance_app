@@ -24,8 +24,6 @@ class User(UserMixin, db.Model):
     full_name = db.Column(db.String(120), nullable=False)
     email = db.Column(db.String(120), unique=True, nullable=False)
     password_hash = db.Column(db.String(255), nullable=False)
-    role = db.Column(db.String(20), nullable=False, default="lecturer")  # 'admin' or 'lecturer'
-    employee_id = db.Column(db.String(20), unique=True, nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
@@ -144,18 +142,6 @@ class LecturerAssignment(db.Model):
     course = db.relationship("Course", back_populates="course_assignments")
     module = db.relationship("Module", back_populates="assignments")
 
-
-# -------------------------
-# Student Model
-# -------------------------
-class Student(db.Model):
-    __tablename__ = "students"
-    id = db.Column(db.Integer, primary_key=True)
-    full_name = db.Column(db.String(120), nullable=False)
-    email = db.Column(db.String(120), unique=True, nullable=False)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-
-    attendance_records = db.relationship("AttendanceRecord", back_populates="student", lazy=True)
 
 
 # -------------------------
