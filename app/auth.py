@@ -1,91 +1,121 @@
-from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
+from flask import Blueprint, render_template, request, redirect, url_for, flash
 from werkzeug.security import generate_password_hash, check_password_hash
-from flask_login import login_user, logout_user, login_required
-from flask_jwt_extended import create_access_token
-from .models import db, User, Faculty, Department, Course, Module, Student, Lecturer
+from flask_login import login_user, logout_user, login_required, current_user
+from .models import db, User
 
-auth_bp = Blueprint("auth_bp", __name__)
+auth_bp = Blueprint("auth_bp", __name__, template_folder="templates/auth")
 
-# ----------------------
-# Lecturer Registration (Web)
-# ----------------------
-@auth_bp.route("/register", methods=["GET", "POST"])
-def register():
-    faculties = Faculty.query.order_by(Faculty.name).all()
-
+# -------------------- ADMIN REGISTRATION --------------------
+@auth_bp.route("/admin/register", methods=["GET", "POST"])
+def admin_register():
+    """
+    Admin registration (should be limited or done by super admin only)
+    """
     if request.method == "POST":
         full_name = request.form.get("full_name")
         email = request.form.get("email")
-        contact = request.form.get("contact")
         password = request.form.get("password")
-        password2 = request.form.get("password2")
-        department_id = request.form.get("department") or None  # only department is needed
 
-        # --- Validations ---
         if not full_name or not email or not password:
-            flash("Please fill in all required fields.", "danger")
-            return redirect(url_for("auth_bp.register"))
+            flash("All fields are required.", "warning")
+            return redirect(url_for("auth_bp.admin_register"))
 
-        if password != password2:
-            flash("Passwords do not match.", "danger")
-            return redirect(url_for("auth_bp.register"))
+        existing_user = User.query.filter_by(email=email).first()
+        if existing_user:
+            flash("Email already exists. Please log in.", "danger")
+            return redirect(url_for("auth_bp.admin_login"))
 
-        if User.query.filter_by(email=email).first():
-            flash("Email already registered.", "warning")
-            return redirect(url_for("auth_bp.register"))
+        password_hash = generate_password_hash(password)
+        admin_user = User(full_name=full_name, email=email, password_hash=password_hash, role="admin")
 
-        # --- Create User ---
-        hashed = generate_password_hash(password)
-        user = User(
-            full_name=full_name,
-            email=email,
-            contact=contact,
-            password_hash=hashed,
-            type="lecturer"
-        )
-        db.session.add(user)
-        db.session.flush()  # get user.id
-
-        # --- Create Lecturer (fixed) ---
-        lecturer = Lecturer(
-            id=user.id,
-            lecturer_id=f"L-{user.id:04d}",
-            department_id=department_id
-        )
-        db.session.add(lecturer)
+        db.session.add(admin_user)
         db.session.commit()
 
-        flash("Account created successfully — please log in.", "success")
-        return redirect(url_for("auth_bp.login"))
+        flash("Admin account created successfully!", "success")
+        return redirect(url_for("auth_bp.admin_login"))
 
-    return render_template("register.html", faculties=faculties)
+    return render_template("admin_register.html")
 
 
-
-# ----------------------
-# Web Login
-# ----------------------
-@auth_bp.route("/login", methods=["GET", "POST"])
-def login():
+# -------------------- ADMIN LOGIN --------------------
+@auth_bp.route("/admin/login", methods=["GET", "POST"])
+def admin_login():
+    """
+    Admin login only
+    """
     if request.method == "POST":
         email = request.form.get("email")
         password = request.form.get("password")
 
-        user = User.query.filter_by(email=email).first()
-        if not user or not check_password_hash(user.password_hash, password):
-            flash("Invalid email or password.", "danger")
-            return redirect(url_for("auth_bp.login"))
+        admin = User.query.filter_by(email=email, role="admin").first()
 
-        login_user(user)
-        flash("Logged in successfully.", "success")
+        if not admin or not check_password_hash(admin.password_hash, password):
+            flash("Invalid email or password.", "danger")
+            return redirect(url_for("auth_bp.admin_login"))
+
+        login_user(admin)
+        flash(f"Welcome back, {admin.full_name}!", "success")
+        return redirect(url_for("admin_bp.dashboard"))
+
+    return render_template("admin_login.html")
+
+
+# -------------------- LECTURER REGISTRATION --------------------
+@auth_bp.route("/lecturer/register", methods=["GET", "POST"])
+def lecturer_register():
+    """
+    Lecturer self-registration
+    """
+    if request.method == "POST":
+        full_name = request.form.get("full_name")
+        email = request.form.get("email")
+        password = request.form.get("password")
+
+        if not full_name or not email or not password:
+            flash("All fields are required.", "warning")
+            return redirect(url_for("auth_bp.lecturer_register"))
+
+        existing_user = User.query.filter_by(email=email).first()
+        if existing_user:
+            flash("Email already exists. Please log in.", "danger")
+            return redirect(url_for("auth_bp.lecturer_login"))
+
+        password_hash = generate_password_hash(password)
+        new_lecturer = User(full_name=full_name, email=email, password_hash=password_hash, role="lecturer")
+
+        db.session.add(new_lecturer)
+        db.session.commit()
+
+        flash(f"Lecturer account created! Your Employee ID is {new_lecturer.employee_id}", "success")
+        return redirect(url_for("auth_bp.lecturer_login"))
+
+    return render_template("lecturer_register.html")
+
+
+# -------------------- LECTURER LOGIN --------------------
+@auth_bp.route("/lecturer/login", methods=["GET", "POST"])
+def lecturer_login():
+    """
+    Lecturer login only
+    """
+    if request.method == "POST":
+        email = request.form.get("email")
+        password = request.form.get("password")
+
+        lecturer = User.query.filter_by(email=email, role="lecturer").first()
+
+        if not lecturer or not check_password_hash(lecturer.password_hash, password):
+            flash("Invalid email or password.", "danger")
+            return redirect(url_for("auth_bp.lecturer_login"))
+
+        login_user(lecturer)
+        flash(f"Welcome back, {lecturer.full_name}!", "success")
         return redirect(url_for("main_bp.dashboard"))
 
-    return render_template("login.html")
+    return render_template("lecturer_login.html")
 
 
-# ----------------------
-# Logout
-# ----------------------
+# -------------------- LOGOUT --------------------
 @auth_bp.route("/logout")
 @login_required
 def logout():

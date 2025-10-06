@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Lecturer Login</title>
+    <script>
+        function togglePassword() {
+            const field = document.getElementById("password");
+            field.type = field.type === "password" ? "text" : "password";
+        }
+    </script>
+</head>
+<body>
+    <h2>Lecturer Sign In</h2>
+    <form method="POST">
+        <label>Email</label>
+        <input type="email" name="email" required>
+
+        <label>Password</label>
+        <input type="password" id="password" name="password" required>
+        <input type="checkbox" onclick="togglePassword()"> Show Password
+
+        <button type="submit">Login</button>
+    </form>
+    <p>Don't have an account? <a href="{{ url_for('auth_bp.lecturer_register') }}">Register as Lecturer</a></p>
+</body>
+</html>

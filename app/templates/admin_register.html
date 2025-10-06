@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Admin Register</title>
+    <script>
+        function togglePassword() {
+            const field = document.getElementById("password");
+            field.type = field.type === "password" ? "text" : "password";
+        }
+    </script>
+</head>
+<body>
+    <h2>Admin Sign Up</h2>
+    <form method="POST">
+        <label>Full Name</label>
+        <input type="text" name="full_name" required>
+
+        <label>Email</label>
+        <input type="email" name="email" required>
+
+        <label>Password</label>
+        <input type="password" id="password" name="password" required>
+        <input type="checkbox" onclick="togglePassword()"> Show Password
+
+        <button type="submit">Register</button>
+    </form>
+    <p>Already have an account? <a href="{{ url_for('auth_bp.admin_login') }}">Login here</a></p>
+</body>
+</html>
