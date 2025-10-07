@@ -1,7 +1,8 @@
-from flask import Blueprint, render_template, request, redirect, url_for, flash
+from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_login import login_user, logout_user, login_required, current_user
-from .models import db, User
+from .models import db, User, Student
+from flask_jwt_extended import create_access_token
 
 auth_bp = Blueprint("auth_bp", __name__, template_folder="templates/auth")
 
@@ -125,7 +126,7 @@ def logout():
 
 
 # ----------------------
-# API: Login (Mobile - Any User)
+# API: Login Lecturer and Admin (Web)
 # ----------------------
 @auth_bp.route("/api/login", methods=["POST"])
 def api_login():
@@ -162,7 +163,7 @@ def api_student_register():
     department_id = data.get("department_id")
     course_id = data.get("course_id")
     module_id = data.get("module_id")
-    face_encoding = data.get("face_encoding")  # optional field
+    face_encoding = data.get("face_encoding") 
 
     if not full_name or not email or not password or not student_number:
         return jsonify({"msg": "Missing required fields"}), 400
