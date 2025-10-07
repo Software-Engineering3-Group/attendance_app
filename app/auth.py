@@ -1,9 +1,18 @@
-from flask import Blueprint, render_template, request, redirect, url_for, flash
+from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_login import login_user, logout_user, login_required, current_user
-from .models import db, User
+from .models import db, User, Lecturer, Student
+from flask_jwt_extended import create_access_token
+import random
+import string
 
 auth_bp = Blueprint("auth_bp", __name__, template_folder="templates/auth")
+
+def generate_employee_id():
+    prefix = "DUT-L"
+    suffix = ''.join(random.choices(string.digits, k=4))
+    return f"{prefix}{suffix}"
+
 
 # -------------------- ADMIN REGISTRATION --------------------
 @auth_bp.route("/admin/register", methods=["GET", "POST"])
@@ -71,25 +80,59 @@ def lecturer_register():
         email = request.form.get("email")
         password = request.form.get("password")
 
+        # -----------------------------
+        # 1️⃣ Validate Input Fields
+        # -----------------------------
         if not full_name or not email or not password:
             flash("All fields are required.", "warning")
             return redirect(url_for("auth_bp.lecturer_register"))
 
+        # -----------------------------
+        # 2️⃣ Check for Existing Account
+        # -----------------------------
         existing_user = User.query.filter_by(email=email).first()
         if existing_user:
-            flash("Email already exists. Please log in.", "danger")
+            flash("Email already exists. Please log in instead.", "danger")
             return redirect(url_for("auth_bp.lecturer_login"))
 
+        # -----------------------------
+        # 3️⃣ Create the User Record
+        # -----------------------------
         password_hash = generate_password_hash(password)
-        new_lecturer = User(full_name=full_name, email=email, password_hash=password_hash, role="lecturer")
+        new_user = User(
+            full_name=full_name,
+            email=email,
+            password_hash=password_hash,
+            role="lecturer"
+        )
+
+        db.session.add(new_user)
+        db.session.flush()  # assign an ID before linking to Lecturer
+
+        # -----------------------------
+        # 4️⃣ Create the Linked Lecturer Profile
+        # -----------------------------
+        employee_id = generate_employee_id()
+        new_lecturer = Lecturer(
+            id=new_user.id,            # link to User table
+            employee_id=employee_id,   # auto-generated ID
+        )
 
         db.session.add(new_lecturer)
         db.session.commit()
 
-        flash(f"Lecturer account created! Your Employee ID is {new_lecturer.employee_id}", "success")
+        # -----------------------------
+        # 5️⃣ Success Message and Redirect
+        # -----------------------------
+        flash(f"Lecturer account created successfully! Your Employee ID is {employee_id}", "success")
         return redirect(url_for("auth_bp.lecturer_login"))
 
+    # -----------------------------
+    # 6️⃣ GET Request (Render Form)
+    # -----------------------------
     return render_template("lecturer_register.html")
+
+
 
 
 # -------------------- LECTURER LOGIN --------------------

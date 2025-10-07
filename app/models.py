@@ -6,17 +6,17 @@ import string
 
 db = SQLAlchemy()
 
-# -------------------------
-# Helper function to generate a random employee ID
-# -------------------------
-def generate_employee_id():
-    prefix = "DUT-L"
+# ------------------------------------------------------------
+# Helper function: Generate unique employee IDs for lecturers/admins
+# ------------------------------------------------------------
+def generate_employee_id(prefix="DUT-L"):
     suffix = ''.join(random.choices(string.digits, k=4))
     return f"{prefix}{suffix}"
 
-# -------------------------
-# User Model (Admin & Lecturer)
-# -------------------------
+
+# ------------------------------------------------------------
+# Base User Model (shared by Admins, Lecturers, and Students)
+# ------------------------------------------------------------
 class User(UserMixin, db.Model):
     __tablename__ = "users"
 
@@ -27,77 +27,98 @@ class User(UserMixin, db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
-# ------------------ Extended User Models ------------------
+    # Optional: store user role to easily distinguish between Admin, Lecturer, Student
+    role = db.Column(db.String(20), nullable=False, default="student")
+
+    def __repr__(self):
+        return f"<User {self.full_name} ({self.role})>"
+
+
+# ------------------------------------------------------------
+# Student Model
+# ------------------------------------------------------------
 class Student(db.Model):
     __tablename__ = "students"
+
     id = db.Column(db.Integer, db.ForeignKey("users.id"), primary_key=True)
     student_number = db.Column(db.String(50), unique=True, nullable=False)
-    faculty_id = db.Column(db.Integer, db.ForeignKey("faculties.id"), nullable=True)
-    department_id = db.Column(db.Integer, db.ForeignKey("departments.id"), nullable=True)
-    course_id = db.Column(db.Integer, db.ForeignKey("courses.id"), nullable=True)
-    module_id = db.Column(db.Integer, db.ForeignKey("modules.id"), nullable=True)
+    faculty_id = db.Column(db.Integer, db.ForeignKey("faculties.id"))
+    department_id = db.Column(db.Integer, db.ForeignKey("departments.id"))
+    course_id = db.Column(db.Integer, db.ForeignKey("courses.id"))
+    module_id = db.Column(db.Integer, db.ForeignKey("modules.id"))
     face_encoding = db.Column(db.Text, nullable=True)
-    # <-- Add this
+
+    user = db.relationship("User", backref=db.backref("student_profile", uselist=False))
     attendance_records = db.relationship(
         "AttendanceRecord",
         back_populates="student",
         lazy=True,
-        cascade="all, delete-orphan")
-
-    user = db.relationship("User", backref=db.backref("student_profile", uselist=False))
-
-class Lecturer(db.Model):
-    __tablename__ = "lecturers"
-    id = db.Column(db.Integer, db.ForeignKey("users.id"), primary_key=True)
-    employee_id = db.Column(db.String(50), unique=True, nullable=False)
-    department_id = db.Column(db.Integer, db.ForeignKey("departments.id"), nullable=True)
-
-    lecturer_assignments = db.relationship(
-        "LecturerAssignment",
-        back_populates="lecturer",
         cascade="all, delete-orphan"
     )
 
-    user = db.relationship("User", backref=db.backref("lecturer_profile", uselist=False))
+    def __repr__(self):
+        return f"<Student {self.student_number} - {self.user.full_name}>"
 
+
+# ------------------------------------------------------------
+# Lecturer Model
+# ------------------------------------------------------------
+class Lecturer(db.Model):
+    __tablename__ = "lecturers"
+
+    id = db.Column(db.Integer, db.ForeignKey("users.id"), primary_key=True)
+    employee_id = db.Column(db.String(50), unique=True, nullable=False, default=lambda: generate_employee_id())
+    department_id = db.Column(db.Integer, db.ForeignKey("departments.id"))
+
+    user = db.relationship("User", backref=db.backref("lecturer_profile", uselist=False))
+    lecturer_assignments = db.relationship(
+        "LecturerAssignment",
+        back_populates="lecturer",
+        lazy=True,
+        cascade="all, delete-orphan"
+    )
+
+    def __repr__(self):
+        return f"<Lecturer {self.employee_id} - {self.user.full_name}>"
+
+
+# ------------------------------------------------------------
+# Admin Model
+# ------------------------------------------------------------
 class Admin(db.Model):
     __tablename__ = "admins"
+
     id = db.Column(db.Integer, db.ForeignKey("users.id"), primary_key=True)
-    employee_id = db.Column(db.String(50), unique=True, nullable=False)
+    employee_id = db.Column(db.String(50), unique=True, nullable=False, default=lambda: generate_employee_id(prefix="DUT-A"))
+
     user = db.relationship("User", backref=db.backref("admin_profile", uselist=False))
 
-class LecturerAssignment(db.Model):
-    __tablename__ =  "lecturer_assignments"
+    def __repr__(self):
+        return f"<Admin {self.employee_id} - {self.user.full_name}>"
 
-    id=db.Column(db.Integer, primary_key=True)
-    lecturer_id= db.Column(db.Integer, db.ForeignKey("lecturers.id"), nullable=False)
-    faculty_id= db.Column(db.Integer, db.ForeignKey("faculties.id"), nullable=False)
-    department_id = db.Column(db.Integer, db.ForeignKey("departments.id"), nullable=False)
-    course_id = db.Column(db.Integer, db. ForeignKey("courses.id"), nullable=False)
-    module_id= db.Column(db.Integer, db.ForeignKey("modules.id"), nullable=False)
 
-    lecturer = db.relationship('Lecturer', back_populates='lecturer_assignments')
-    assigned_at =  db.Column(db.DateTime, default=datetime.utcnow)
-    faculty = db.relationship("Faculty", back_populates="faculty_assignments")
-    department = db.relationship("Department", back_populates="department_assignments")
-    course = db.relationship("Course", back_populates="course_assignments")
-    module = db.relationship("Module", back_populates="assignments")
-
-# ------------------ Faculty & Academic Models ------------------
+# ------------------------------------------------------------
+# Faculty Model
+# ------------------------------------------------------------
 class Faculty(db.Model):
     __tablename__ = "faculties"
+
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(120), unique=True, nullable=False)
 
     departments = db.relationship("Department", backref="faculty", lazy=True)
     faculty_assignments = db.relationship("LecturerAssignment", back_populates="faculty", lazy=True)
 
+    def __repr__(self):
+        return f"<Faculty {self.name}>"
 
-# -------------------------
+
+# ------------------------------------------------------------
 # Department Model
-# -------------------------
+# ------------------------------------------------------------
 class Department(db.Model):
     __tablename__ = "departments"
+
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(120), unique=True, nullable=False)
     faculty_id = db.Column(db.Integer, db.ForeignKey("faculties.id"), nullable=False)
@@ -105,12 +126,16 @@ class Department(db.Model):
     courses = db.relationship("Course", backref="department", lazy=True)
     department_assignments = db.relationship("LecturerAssignment", back_populates="department", lazy=True)
 
+    def __repr__(self):
+        return f"<Department {self.name}>"
 
-# -------------------------
+
+# ------------------------------------------------------------
 # Course Model
-# -------------------------
+# ------------------------------------------------------------
 class Course(db.Model):
     __tablename__ = "courses"
+
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(120), unique=True, nullable=False)
     department_id = db.Column(db.Integer, db.ForeignKey("departments.id"), nullable=False)
@@ -118,12 +143,16 @@ class Course(db.Model):
     modules = db.relationship("Module", backref="course", lazy=True)
     course_assignments = db.relationship("LecturerAssignment", back_populates="course", lazy=True)
 
+    def __repr__(self):
+        return f"<Course {self.name}>"
 
-# -------------------------
+
+# ------------------------------------------------------------
 # Module Model
-# -------------------------
+# ------------------------------------------------------------
 class Module(db.Model):
     __tablename__ = "modules"
+
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(120), unique=True, nullable=False)
     course_id = db.Column(db.Integer, db.ForeignKey("courses.id"), nullable=False)
@@ -131,17 +160,40 @@ class Module(db.Model):
     assignments = db.relationship("LecturerAssignment", back_populates="module", lazy=True)
     attendance_sessions = db.relationship("AttendanceSession", back_populates="module", lazy=True)
 
-
-# -------------------------
-# LecturerAssignment Model
-# -------------------------
+    def __repr__(self):
+        return f"<Module {self.name}>"
 
 
-# -------------------------
-# AttendanceSession Model
-# -------------------------
+# ------------------------------------------------------------
+# Lecturer Assignment (Admin assigns lecturers to faculties/departments/courses/modules)
+# ------------------------------------------------------------
+class LecturerAssignment(db.Model):
+    __tablename__ = "lecturer_assignments"
+
+    id = db.Column(db.Integer, primary_key=True)
+    lecturer_id = db.Column(db.Integer, db.ForeignKey("lecturers.id"), nullable=False)
+    faculty_id = db.Column(db.Integer, db.ForeignKey("faculties.id"), nullable=False)
+    department_id = db.Column(db.Integer, db.ForeignKey("departments.id"), nullable=False)
+    course_id = db.Column(db.Integer, db.ForeignKey("courses.id"), nullable=False)
+    module_id = db.Column(db.Integer, db.ForeignKey("modules.id"), nullable=False)
+    assigned_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    lecturer = db.relationship("Lecturer", back_populates="lecturer_assignments")
+    faculty = db.relationship("Faculty", back_populates="faculty_assignments")
+    department = db.relationship("Department", back_populates="department_assignments")
+    course = db.relationship("Course", back_populates="course_assignments")
+    module = db.relationship("Module", back_populates="assignments")
+
+    def __repr__(self):
+        return f"<Assignment Lecturer {self.lecturer_id} → Module {self.module_id}>"
+
+
+# ------------------------------------------------------------
+# Attendance Session (e.g., class held on a specific date)
+# ------------------------------------------------------------
 class AttendanceSession(db.Model):
     __tablename__ = "attendance_sessions"
+
     id = db.Column(db.Integer, primary_key=True)
     module_id = db.Column(db.Integer, db.ForeignKey("modules.id"), nullable=False)
     session_date = db.Column(db.DateTime, default=datetime.utcnow)
@@ -149,12 +201,16 @@ class AttendanceSession(db.Model):
     module = db.relationship("Module", back_populates="attendance_sessions")
     attendance_records = db.relationship("AttendanceRecord", back_populates="session", lazy=True)
 
+    def __repr__(self):
+        return f"<Session {self.module.name} on {self.session_date.strftime('%Y-%m-%d')}>"
 
-# -------------------------
-# AttendanceRecord Model
-# -------------------------
+
+# ------------------------------------------------------------
+# Attendance Record (each student's attendance per session)
+# ------------------------------------------------------------
 class AttendanceRecord(db.Model):
     __tablename__ = "attendance_records"
+
     id = db.Column(db.Integer, primary_key=True)
     session_id = db.Column(db.Integer, db.ForeignKey("attendance_sessions.id"), nullable=False)
     student_id = db.Column(db.Integer, db.ForeignKey("students.id"), nullable=False)
@@ -163,3 +219,6 @@ class AttendanceRecord(db.Model):
 
     session = db.relationship("AttendanceSession", back_populates="attendance_records")
     student = db.relationship("Student", back_populates="attendance_records")
+
+    def __repr__(self):
+        return f"<Attendance Student {self.student_id} - {self.status}>"
