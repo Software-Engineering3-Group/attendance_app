@@ -5,7 +5,7 @@ from .models import db, User, Lecturer, Student
 from flask_jwt_extended import create_access_token
 import random
 import string
-
+d 
 auth_bp = Blueprint("auth_bp", __name__, template_folder="templates/auth")
 
 def generate_employee_id():
