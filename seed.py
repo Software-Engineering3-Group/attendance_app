@@ -1,5 +1,6 @@
 from app import create_app
 from app.models import db, Faculty, Department, Course, Module  # ✅ import from app.models
+from app.models import db, Faculty, Department, Course, Module
 
 app = create_app()
 

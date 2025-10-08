@@ -18,3 +18,5 @@ def get_courses(department_id):
 def get_modules(course_id):
     modules = Module.query.filter_by(course_id=course_id).all()
     return jsonify([{"id": m.id, "name": m.name} for m in modules])
+
+
