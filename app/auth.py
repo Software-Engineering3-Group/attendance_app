@@ -224,6 +224,7 @@ def api_student_login():
         "user_id": user.id,
         "full_name": user.full_name
     })
+
 # -------------------- AJAX: Departments by Faculty --------------------
 @auth_bp.route("/get_departments/<int:faculty_id>")
 def get_departments(faculty_id):
