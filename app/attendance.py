@@ -100,3 +100,6 @@ def api_session_records(session_id):
             "status": r.status
         })
     return jsonify(output)
+
+
+

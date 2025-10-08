@@ -5,7 +5,8 @@ from .models import db, User, Lecturer, Student
 from flask_jwt_extended import create_access_token
 import random
 import string
-d 
+from datetime import timedelta
+
 auth_bp = Blueprint("auth_bp", __name__, template_folder="templates/auth")
 
 def generate_employee_id():
@@ -157,6 +158,41 @@ def lecturer_login():
 
     return render_template("lecturer_login.html")
 
+# -------------------- LECTURER LOGIN (API) --------------------
+@auth_bp.route("/api/lecturer/login", methods=["POST"])
+def lecturer_login_api():
+    """
+    Lecturer login (for scanner/mobile client).
+    Validates lecturer credentials and returns JWT + full name.
+    """
+    try:
+        data = request.get_json()
+
+        email = data.get("email")
+        password = data.get("password")
+
+        if not email or not password:
+            return jsonify({"error": "Email and password are required."}), 400
+
+        # Find lecturer by email and role
+        lecturer = User.query.filter_by(email=email, role="lecturer").first()
+
+        if not lecturer or not check_password_hash(lecturer.password_hash, password):
+            return jsonify({"error": "Invalid email or password."}), 401
+
+        # Create a JWT valid for 12 hours
+        access_token = create_access_token(
+            identity=str(lecturer.id)
+        )
+
+        return jsonify({
+            "token": access_token,
+            "full_name": lecturer.full_name
+        }), 200
+
+    except Exception as e:
+        print(f"Error during lecturer login: {e}")
+        return jsonify({"error": "Server error."}), 500
 
 # -------------------- LOGOUT --------------------
 @auth_bp.route("/logout")
@@ -198,7 +234,6 @@ def api_student_register():
 
     full_name = data.get("full_name")
     email = data.get("email")
-    contact = data.get("contact")
     password = data.get("password")
     student_number = data.get("student_number")
     faculty_id = data.get("faculty_id")
@@ -217,9 +252,8 @@ def api_student_register():
     user = User(
         full_name=full_name,
         email=email,
-        contact=contact,
         password_hash=hashed,
-        type="student"
+        role="student"
     )
     db.session.add(user)
     db.session.flush()  # retrieve user.id before commit

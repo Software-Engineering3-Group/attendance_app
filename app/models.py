@@ -196,13 +196,22 @@ class AttendanceSession(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     module_id = db.Column(db.Integer, db.ForeignKey("modules.id"), nullable=False)
-    session_date = db.Column(db.DateTime, default=datetime.utcnow)
+    lecturer_id = db.Column(db.Integer, db.ForeignKey("lecturers.id"), nullable=False)
 
+    # When session started and ends (for scanning)
+    start_time = db.Column(db.DateTime, default=datetime.utcnow)
+    end_time = db.Column(db.DateTime, nullable=True)
+
+    # Optional status to easily check if active/closed
+    is_active = db.Column(db.Boolean, default=True)
+
+    # Relationships
     module = db.relationship("Module", back_populates="attendance_sessions")
-    attendance_records = db.relationship("AttendanceRecord", back_populates="session", lazy=True)
+    lecturer = db.relationship("Lecturer", backref=db.backref("attendance_sessions", lazy=True))
+    attendance_records = db.relationship("AttendanceRecord", back_populates="session", lazy=True, cascade="all, delete-orphan")
 
     def __repr__(self):
-        return f"<Session {self.module.name} on {self.session_date.strftime('%Y-%m-%d')}>"
+        return f"<Session {self.module.name} by {self.lecturer.user.full_name} ({'Active' if self.is_active else 'Closed'})>"
 
 
 # ------------------------------------------------------------
@@ -214,11 +223,12 @@ class AttendanceRecord(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     session_id = db.Column(db.Integer, db.ForeignKey("attendance_sessions.id"), nullable=False)
     student_id = db.Column(db.Integer, db.ForeignKey("students.id"), nullable=False)
-    status = db.Column(db.String(20), nullable=False, default="absent")
+
+    status = db.Column(db.String(20), nullable=False, default="present")  # usually default present if scanned
     marked_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     session = db.relationship("AttendanceSession", back_populates="attendance_records")
     student = db.relationship("Student", back_populates="attendance_records")
 
     def __repr__(self):
-        return f"<Attendance Student {self.student_id} - {self.status}>"
+        return f"<Attendance Student {self.student_id} - Session {self.session_id} - {self.status}>"
