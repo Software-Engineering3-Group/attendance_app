@@ -132,6 +132,98 @@ def logout():
     flash("Logged out successfully.", "info")
     return redirect(url_for("auth_bp.admin_login"))
 
+# ----------------------
+# API: Login Lecturer and Admin (Web)
+# ----------------------
+@auth_bp.route("/api/login", methods=["POST"])
+def api_login():
+    data = request.get_json() or {}
+    email = data.get("email")
+    password = data.get("password")
+
+    user = User.query.filter_by(email=email).first()
+    if not user or not check_password_hash(user.password_hash, password):
+        return jsonify({"msg": "Invalid credentials"}), 401
+
+    token = create_access_token(identity=user.id)
+    return jsonify({
+        "access_token": token,
+        "user_id": user.id,
+        "full_name": user.full_name,
+        "type": user.type
+    })
+
+
+# ----------------------
+# API: Student Registration (Mobile)
+# ----------------------
+@auth_bp.route("/api/students/register", methods=["POST"])
+def api_student_register():
+    data = request.get_json() or {}
+
+    full_name = data.get("full_name")
+    email = data.get("email")
+    contact = data.get("contact")
+    password = data.get("password")
+    student_number = data.get("student_number")
+    faculty_id = data.get("faculty_id")
+    department_id = data.get("department_id")
+    course_id = data.get("course_id")
+    module_id = data.get("module_id")
+    face_encoding = data.get("face_encoding") 
+
+    if not full_name or not email or not password or not student_number:
+        return jsonify({"msg": "Missing required fields"}), 400
+
+    if User.query.filter_by(email=email).first():
+        return jsonify({"msg": "Email already registered"}), 409
+
+    hashed = generate_password_hash(password)
+    user = User(
+        full_name=full_name,
+        email=email,
+        contact=contact,
+        password_hash=hashed,
+        type="student"
+    )
+    db.session.add(user)
+    db.session.flush()  # retrieve user.id before commit
+
+    student = Student(
+        id=user.id,
+        student_number=student_number,
+        faculty_id=faculty_id,
+        department_id=department_id,
+        course_id=course_id,
+        module_id=module_id,
+        face_encoding=face_encoding
+    )
+    db.session.add(student)
+    db.session.commit()
+
+    return jsonify({"msg": "Student registered successfully", "user_id": user.id}), 201
+
+
+# ----------------------
+# API: Student Login (Mobile)
+# ----------------------
+@auth_bp.route("/api/students/login", methods=["POST"])
+def api_student_login():
+    data = request.get_json() or {}
+    email = data.get("email")
+    password = data.get("password")
+
+
+    user = User.query.filter_by(email=email).first()
+    if not user or not check_password_hash(user.password_hash, password):
+        return jsonify({"msg": "Invalid credentials"}), 401
+
+    token = create_access_token(identity=user.id)
+    return jsonify({
+        "access_token": token,
+        "user_id": user.id,
+        "full_name": user.full_name
+    })
 # -------------------- AJAX: Departments by Faculty --------------------
 @auth_bp.route("/get_departments/<int:faculty_id>")
 def get_departments(faculty_id):

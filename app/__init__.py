@@ -5,6 +5,7 @@ from flask_login import LoginManager
 from flask_jwt_extended import JWTManager
 from dotenv import load_dotenv
 from sqlalchemy import text
+from datetime import timedelta
 
 # Load environment variables from .env
 load_dotenv()
@@ -29,6 +30,7 @@ def create_app():
     )
     app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
     app.config["JWT_SECRET_KEY"] = os.getenv("JWT_SECRET_KEY", "jwt_secret_key")
+    app.config["JWT_ACCESS_TOKEN_EXPIRES"] = timedelta(hours=1)
 
     # ---------------- DATABASE SETUP ---------------- #
     db.init_app(app)
