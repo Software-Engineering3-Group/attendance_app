@@ -23,37 +23,39 @@
                 <div class="accordion-body">
 
                     <!-- Students Table for this module -->
-                    <table class="table table-bordered">
-                        <thead>
-                        <tr>
-                            <th>Student</th>
-                            <th>Status</th>
-                            <th>Marks</th>
-                            <th>Action</th>
-                        </tr>
+                    <table class="table table-bordered table-hover align-middle">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Student</th>
+                                <th>Marks</th>
+                                <th>Action</th>
+                            </tr>
                         </thead>
                         <tbody>
                         {% for student in students %}
-                        {% set records = attendance_records | selectattr('student_id', 'equalto', student.id) | selectattr('session.module.id', 'equalto', assignment.module.id) | list %}
-                        {% for record in records %}
-                        <tr>
-                            <td>{{ student.user.full_name }}</td>
-                            <td>{{ record.status }}</td>
-                            <td>{{ record.attendance_marks }}</td>
-                            <td>
-                                {% if record.status == "present" %}
-                                <form action="{{ url_for('main_bp.allocate_marks') }}" method="POST" class="d-flex align-items-center gap-2">
-                                    <input type="hidden" name="student_id" value="{{ student.id }}">
-                                    <input type="hidden" name="module_id" value="{{ assignment.module.id }}">
-                                    <input type="number" name="marks" min="0" max="10" value="{{ record.attendance_marks }}" class="form-control w-auto">
-                                    <button type="submit" class="btn btn-sm btn-success">Allocate</button>
-                                </form>
-                                {% else %}
-                                <span class="text-muted">No marks</span>
-                                {% endif %}
-                            </td>
-                        </tr>
-                        {% endfor %}
+                            {% set record = (attendance_records | selectattr('student_id', 'equalto', student.id) | selectattr('session.module_id', 'equalto', assignment.module.id) | list | first) %}
+                            <tr>
+                                <td>{{ student.user.full_name }}</td>    
+                                <td>
+                                    {% if record and record.status == "present" %}
+                                    <form action="{{ url_for('main_bp.allocate_marks') }}" method="POST" class="d-flex align-items-center gap-2">
+                                        <input type="hidden" name="student_id" value="{{ student.id }}">
+                                        <input type="hidden" name="module_id" value="{{ assignment.module.id }}">
+                                        <input type="number" name="marks" min="0" max="10" value="{{ record.attendance_marks or 0 }}" class="form-control w-auto">
+                                        <button type="submit" class="btn btn-sm btn-success">Allocate</button>
+                                    </form>
+                                    {% else %}
+                                    <span class="text-muted">0</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <button>View</button>
+                                </td>
+                            </tr>
+                        {% else %}
+                            <tr>
+                                <td colspan="4" class="text-center text-muted">No students assigned to this module</td>
+                            </tr>
                         {% endfor %}
                         </tbody>
                     </table>

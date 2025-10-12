@@ -153,11 +153,25 @@ def dashboard():
     assignments = LecturerAssignment.query.filter_by(lecturer_id=lecturer.id).all()
     module_ids = [a.module_id for a in assignments]
 
+    # --- NEW LOGIC START ---
+    # Get all courses related to the lecturer's assigned modules
+    course_ids = (
+        db.session.query(Module.course_id)
+        .filter(Module.id.in_(module_ids))
+        .distinct()
+        .all()
+    )
+    course_ids = [c[0] for c in course_ids]
+
+    # Fetch all students enrolled in those courses
     students = (
-        Student.query.filter(Student.module_id.in_(module_ids))
+        Student.query
+        .filter(Student.course_id.in_(course_ids))
         .join(User)
         .all()
     )
+    # --- NEW LOGIC END ---
+
 
     attendance_records = (
         AttendanceRecord.query
@@ -166,12 +180,14 @@ def dashboard():
         .all()
     )
 
+    print(students[0].user.full_name if students else "No students found")
     attendance_scores = {}
     for record in attendance_records:
         student_id = record.student_id
         if record.status == "present":
             attendance_scores[student_id] = attendance_scores.get(student_id, 0) + 10
 
+    print(attendance_records)
     return render_template(
         "dashboard.html",
         lecturer=current_user,
@@ -181,6 +197,7 @@ def dashboard():
         attendance_records=attendance_records,
         attendance_scores=attendance_scores
     )
+
 
 
 # ----------------------------

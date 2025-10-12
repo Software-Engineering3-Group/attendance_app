@@ -82,7 +82,7 @@ def verify_face():
         for student in students:
             stored = student.face_encoding
             try:
-                match = compare_face_encodings(stored, incoming_encoding, tolerance=0.4)  # cosine threshold
+                match = compare_face_encodings(stored, incoming_encoding, tolerance=0.5)  # cosine threshold
                 if match:
                     return jsonify({
                         "match": True,

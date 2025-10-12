@@ -1,7 +1,8 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_login import login_user, logout_user, login_required
-from .models import db, User, Lecturer, Faculty, Department
+from flask_jwt_extended import create_access_token
+from .models import db, User, Lecturer, Faculty, Department, Student, Course, Module
 import random
 import string
 from datetime import timedelta
@@ -195,24 +196,40 @@ def api_login():
 # ----------------------
 @auth_bp.route("/api/students/register", methods=["POST"])
 def api_student_register():
+    
     data = request.get_json() or {}
 
     full_name = data.get("full_name")
     email = data.get("email")
     password = data.get("password")
     student_number = data.get("student_number")
-    faculty_id = data.get("faculty_id")
-    department_id = data.get("department_id")
-    course_id = data.get("course_id")
-    module_id = data.get("module_id")
-    face_encoding = data.get("face_encoding") 
+    faculty_name = data.get("faculty")  # received as string
+    course_name = data.get("course")    # received as string
+    module_id = data.get("module_id")   # optional
+    face_encoding = data.get("face_encoding")  # optional
 
-    if not full_name or not email or not password or not student_number:
+    print("Received registration data:", data)
+    
+    if not full_name or not email or not password or not student_number or not faculty_name or not course_name:
         return jsonify({"msg": "Missing required fields"}), 400
 
+    # Check if email already exists
     if User.query.filter_by(email=email).first():
         return jsonify({"msg": "Email already registered"}), 409
+    
+    # Lookup faculty
+    faculty = Faculty.query.filter_by(name=faculty_name).first()
+    if not faculty:
+        return jsonify({"msg": f"Faculty '{faculty_name}' not found"}), 404
 
+    # Lookup course
+    course = Course.query.join(Department)\
+        .filter(Course.name == course_name, Department.faculty_id == faculty.id)\
+        .first()
+    if not course:
+        return jsonify({"msg": f"Course '{course_name}' not found in faculty '{faculty_name}'"}), 404
+
+    # Create User
     hashed = generate_password_hash(password)
     user = User(
         full_name=full_name,
@@ -223,19 +240,27 @@ def api_student_register():
     db.session.add(user)
     db.session.flush()  # retrieve user.id before commit
 
+    # Create Student
     student = Student(
         id=user.id,
         student_number=student_number,
-        faculty_id=faculty_id,
-        department_id=department_id,
-        course_id=course_id,
+        faculty_id=faculty.id,
+        course_id=course.id,
         module_id=module_id,
         face_encoding=face_encoding
     )
     db.session.add(student)
     db.session.commit()
 
-    return jsonify({"msg": "Student registered successfully", "user_id": user.id}), 201
+   # Generate JWT token using user ID
+    access_token = create_access_token(identity=user.id)
+
+    return jsonify({
+        "msg": "Student registered successfully",
+        "user_id": user.id,
+        "full_name": user.full_name,
+        "access_token": access_token
+    }), 201
 
 
 # ----------------------
